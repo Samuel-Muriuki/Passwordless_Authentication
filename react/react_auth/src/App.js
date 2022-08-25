@@ -1,25 +1,73 @@
-import logo from './logo.svg';
-import './App.css';
+import { useState } from "react";
+import "./App.css";
+import SuperTokens, { SuperTokensWrapper, getSuperTokensRoutesForReactRouterDom } from "supertokens-auth-react";
+import Passwordless from "supertokens-auth-react/recipe/passwordless";
+import Session from "supertokens-auth-react/recipe/session";
+import Home from "./Home";
+import { Routes, BrowserRouter as Router, Route } from "react-router-dom";
+import Footer from "./Footer";
+import SessionExpiredPopup from "./SessionExpiredPopup";
+
+export function getApiDomain() {
+    const apiPort = process.env.REACT_APP_API_PORT || 8000;
+    const apiUrl = process.env.REACT_APP_API_URL || `http://localhost:${apiPort}`;
+    return apiUrl;
+}
+
+export function getWebsiteDomain() {
+    const websitePort = process.env.REACT_APP_WEBSITE_PORT || 3000;
+    const websiteUrl = process.env.REACT_APP_WEBSITE_URL || `http://localhost:${websitePort}`;
+    return websiteUrl;
+}
+
+SuperTokens.init({
+    appInfo: {
+        appName: "Demo App",
+        apiDomain: getApiDomain(),
+        websiteDomain: getWebsiteDomain(),
+    },
+    recipeList: [
+        Passwordless.init({
+            contactMethod: "EMAIL_OR_PHONE",
+        }),
+        Session.init(),
+    ],
+});
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    let [showSessionExpiredPopup, updateShowSessionExpiredPopup] = useState(false);
+
+    return (
+        <SuperTokensWrapper>
+            <div className="App">
+                <Router>
+                    <div className="fill">
+                        <Routes>
+                            {/* This shows the login UI on "/auth" route */}
+                            {getSuperTokensRoutesForReactRouterDom(require("react-router-dom"))}
+
+                            <Route
+                                path="/"
+                                element={
+                                    /* This protects the "/" route so that it shows 
+                                        <Home /> only if the user is logged in.
+                                        Else it redirects the user to "/auth" */
+                                    <Passwordless.PasswordlessAuth
+                                        onSessionExpired={() => {
+                                            updateShowSessionExpiredPopup(true);
+                                        }}>
+                                        <Home />
+                                        {showSessionExpiredPopup && <SessionExpiredPopup />}
+                                    </Passwordless.PasswordlessAuth>
+                                }
+                            />
+                        </Routes>
+                    </div>
+                    <Footer />
+                </Router>
+            </div>
+        </SuperTokensWrapper>
+    );
 }
 
 export default App;
